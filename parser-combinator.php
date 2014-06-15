@@ -93,11 +93,16 @@ function memo($fn) {
     };
 }
 
-// $r = function ($str) use (&$r) {
-//     return alt(seq(string('a'), $r),
-//         string('a'))
-//     ->__invoke($str);
-// };
+function Y($le) {
+    return call_user_func(
+        $f ==> $f($f),
+        $f ==> $le($x ==> call_user_func($f($f), $x))
+    );
+}
+
+// $r = Y($r ==>
+//         alt(seq(string('a'), $r),
+//             string('a')));
 // var_dump($r('a'));
 // var_dump($r('aa'));
 // var_dump($r('aaa'));
