@@ -106,3 +106,9 @@ function Y($le) {
 // var_dump($r('a'));
 // var_dump($r('aa'));
 // var_dump($r('aaa'));
+
+// left recursion fails
+// $s = Y($s ==>
+//         alt(seq($s, string('a')),
+//             string('a')));
+// var_dump($s('a'));
