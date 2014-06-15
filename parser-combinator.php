@@ -60,21 +60,20 @@ function alt($a, $b) {
     };
 }
 
-function seq($a, $b) {
+function bind($p, $fn) {
     return $str ==> {
-        $resa = $a($str);
-        if ($resa instanceof Success) {
-            $val1 = $resa->value;
-            $rest1 = $resa->rest;
-
-            $resb = $b($rest1);
-            if ($resb instanceof Success) {
-                $val2 = $resb->value;
-                $rest2 = $resb->rest;
-                return success([$val1, $val2], $rest2);
-            }
-            return $resb;
+        $result = $p($str);
+        if ($result instanceof Success) {
+            return $fn($result->value)->__invoke($result->rest);
         }
-        return $resa;
+        return $result;
     };
 }
+
+function seq($a, $b) {
+    return bind($a, $x ==>
+                bind($b, $y ==>
+                    succeed([$x, $y])));
+}
+
+// var_dump(seq(string('foo'), string('bar'))->__invoke('foobar'));
