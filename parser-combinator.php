@@ -92,3 +92,12 @@ function memo($fn) {
         return $result;
     };
 }
+
+// $r = function ($str) use (&$r) {
+//     return alt(seq(string('a'), $r),
+//         string('a'))
+//     ->__invoke($str);
+// };
+// var_dump($r('a'));
+// var_dump($r('aa'));
+// var_dump($r('aaa'));
