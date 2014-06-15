@@ -27,14 +27,14 @@ function failure($rest) {
 // ---
 
 function succeed($value) {
-    return $str ==>
-        success($value, $str);
+    return memo($str ==>
+            success($value, $str));
 }
 
 // var_dump(succeed([])->__invoke("foo"));
 
 function string($match) {
-    return $str ==> {
+    return memo($str ==> {
         $len = min(strlen($str), strlen($match));
         $head = substr($str, 0, $len);
         $tail = substr($str, $len);
@@ -44,20 +44,20 @@ function string($match) {
         }
 
         return failure($str);
-    };
+    });
 }
 
 // var_dump(string('foo')->__invoke('foobar'));
 // var_dump(string('foo')->__invoke('bar'));
 
 function alt($a, $b) {
-    return $str ==> {
+    return memo($str ==> {
         $result = $a($str);
         if ($result instanceof Success) {
             return $result;
         }
         return $b($str);
-    };
+    });
 }
 
 function bind($p, $fn) {
@@ -71,9 +71,24 @@ function bind($p, $fn) {
 }
 
 function seq($a, $b) {
-    return bind($a, $x ==>
-                bind($b, $y ==>
-                    succeed([$x, $y])));
+    return memo(bind($a, $x ==>
+                    bind($b, $y ==>
+                        succeed([$x, $y]))));
 }
 
 // var_dump(seq(string('foo'), string('bar'))->__invoke('foobar'));
+
+function memo($fn) {
+    $alist = [];
+    return () ==> {
+        $args = func_get_args();
+        foreach ($alist as list($a, $result)) {
+            if ($a === $args) {
+                return $result;
+            }
+        }
+        $result = call_user_func_array($fn, $args);
+        array_unshift($alist, [$args, $result]);
+        return $result;
+    };
+}
