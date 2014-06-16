@@ -39,8 +39,8 @@ function string($match) {
         [$match],
         () ==> memo($str ==> {
             $len = min(strlen($str), strlen($match));
-            $head = substr($str, 0, $len);
-            $tail = substr($str, $len);
+            $head = (string) substr($str, 0, $len);
+            $tail = (string) substr($str, $len);
 
             if ($head == $match) {
                 return success($head, $tail);
