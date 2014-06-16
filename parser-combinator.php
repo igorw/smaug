@@ -27,40 +27,47 @@ function failure($rest) {
 // ---
 
 function succeed($value) {
-    return memo($str ==>
-            success($value, $str));
+    return memofn([$value], () ==>
+            memo($str ==>
+                success($value, $str)));
 }
 
 // var_dump(succeed([])->__invoke("foo"));
 
 function string($match) {
-    return memo($str ==> {
-        $len = min(strlen($str), strlen($match));
-        $head = substr($str, 0, $len);
-        $tail = substr($str, $len);
+    return memofn(
+        [$match],
+        () ==> memo($str ==> {
+            $len = min(strlen($str), strlen($match));
+            $head = substr($str, 0, $len);
+            $tail = substr($str, $len);
 
-        if ($head == $match) {
-            return success($head, $tail);
-        }
+            if ($head == $match) {
+                return success($head, $tail);
+            }
 
-        return failure($str);
-    });
+            return failure($str);
+        })
+    );
 }
 
 // var_dump(string('foo')->__invoke('foobar'));
 // var_dump(string('foo')->__invoke('bar'));
 
 function alt($a, $b) {
-    return memo($str ==> {
-        $result = $a($str);
-        if ($result instanceof Success) {
-            return $result;
-        }
-        return $b($str);
-    });
+    return memofn(
+        [$a, $b],
+        () ==> memo($str ==> {
+            $result = $a($str);
+            if ($result instanceof Success) {
+                return $result;
+            }
+            return $b($str);
+        })
+    );
 }
 
-function bind($p, $fn) {
+function bind($p, callable $fn) {
     return $str ==> {
         $result = $p($str);
         if ($result instanceof Success) {
@@ -71,14 +78,17 @@ function bind($p, $fn) {
 }
 
 function seq($a, $b) {
-    return memo(bind($a, $x ==>
+    return memofn(
+        [$a, $b],
+        () ==> memo(bind($a, $x ==>
                     bind($b, $y ==>
-                        succeed([$x, $y]))));
+                        succeed([$x, $y]))))
+    );
 }
 
 // var_dump(seq(string('foo'), string('bar'))->__invoke('foobar'));
 
-function memo($fn) {
+function memo(callable $fn) {
     $alist = [];
     return () ==> {
         $args = func_get_args();
@@ -91,6 +101,10 @@ function memo($fn) {
         array_unshift($alist, [$args, $result]);
         return $result;
     };
+}
+
+function memofn(array $args, callable $fn) {
+    return call_user_func_array(memo($fn), $args);
 }
 
 function Y($le) {
