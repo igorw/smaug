@@ -11,7 +11,7 @@ function get_parser($grammar, $p) {
   return isset($grammar[$p]) ? $grammar[$p] : $p;
 }
 
-function parse($parser, $index, $tramp) {
+function _parse($parser, $index, $tramp) {
     $parsers = [
         'nt'        => 'igorw\gll\non_terminal_parse',
         'alt'       => 'igorw\gll\alt_parse',
@@ -206,213 +206,235 @@ function node_get($tramp, $node_key) {
     return $node;
 }
 
+// Pushes a result into the trampoline's node.
+// Categorizes as either result or full-result.
+// Schedules notification to all existing listeners of result
+// (Full listeners only get notified about full results)
+function push_result($tramp, $node_key, $result) {
+    $node = node_get($tramp, $node_key);
+    $parser = $node_key[1];
+    if ($parser['hide']) {
+        $result['result'] = null;
+    }
+    if (isset($parser['red'])) {
+        $reduction_function = $parser['red'];
+        // ::start-index and ::end-index are local symbols in original
+        // meta information, we need to store it somehow
+        // ['start_index' => $node_key[0], 'end_index' => $result['index']]
+        $result = make_success(
+            red\apply_reduction($reduction_function, $result['result'])
+        );
+    }
+    $total = total_success($tramp, $result);
+    $results = $total ? $node->full_results : $node->results;
+
+    // set operation?
+    if (!in_array($result, $results)) {
+        $results[] = $result;
+        foreach ($node->listeners as $listener) {
+            push_message($tramp, $listener, $result);
+        }
+    }
+
+    if ($total) {
+        foreach ($node->full_listeners as $listener) {
+            push_message($tramp, $listener, $result);
+        }
+    }
+}
+
+// Pushes a listener into the trampoline's node.
+// Schedules notification to listener of all existing results.
+// Initiates parse if necessary
+function push_listener($tramp, $node_key, $listener) {
+    $listener_already_exists = listener_exists($tramp, $node_key);
+    $node = node_get($tramp, $node_key);
+
+    $node->listeners[] = $listener;
+    foreach ($node->results as $result) {
+        push_message($tramp, $listener, $result);
+    }
+    foreach ($node->full_results as $result) {
+        push_message($tramp, $listener, $result);
+    }
+    if (!$listener_already_exists) {
+        push_stack($tramp, () ==> _parse($node_key[1], $node_key[0], $tramp));
+    }
+}
+
+// Pushes a listener into the trampoline's node.
+// Schedules notification to listener of all existing full results.
+function push_full_listener($tramp, $node_key, $listener) {
+    $full_listener_already_exists = full_listener_exists($tramp, $node_key);
+    $node = node_get($tramp, $node_key);
+
+    $node->full_listeners[] = $listener;
+    foreach ($node->full_results as $result) {
+        push_message($tramp, $listener, $result);
+    }
+    if (!$full_listener_already_exists) {
+        push_stack($tramp, () ==> _full_parse($node_key[1], $node_key[0], $tramp));
+    }
+}
+
+// Pushes a thunk onto the trampoline's negative-listener stack.
+function push_negative_listener($tramp, $negative_listener) {
+    $tramp->negative_listeners[] = $negative_listener;
+}
+
+function success($tramp, $node_key, $result, $end) {
+    push_result($tramp, $node_key, make_success($result, $end));
+}
+
+function fail($tramp, $node_key, $index, $reason) {
+    $failure = $tramp->failure;
+    $current_index = $failure['index'];
+    if ($index > $current_index) {
+        $tramp->failure = new Failure($index, [$reason]);
+    } else if ($index === $current_index) {
+        $tramp->failure = new Failure($index, array_merge([$reason], $failure->reason));
+    }
+
+    if ($tramp->fail_index === $index) {
+        success($tramp, $node_key,
+            build_node_with_meta(
+                $tramp->node_builder, 'instaparse\failure' /* ? */, subs($tramp->text, $index),
+                $index, count($tramp->text)
+            ),
+            count($tramp->text)
+        );
+    }
+}
+
+// Stack helper functions
+
+function step($stack) {
+    return $stack->pop();
+}
+
+// Executes the stack until exhausted
+function run($tramp, $found_result = false) {
+    $stack = $tramp->stack;
+    if ($tramp['success']) {
+        yield $tramp->success['result'];
+        $tramp->success = null;
+        foreach (run($tramp, true) as $v) {
+            yield $v;
+        }
+        yield break;
+    }
+
+    if (count($stack) > 0) {
+        step($stack);
+        foreach (run($tramp, $found_result) as $v) {
+            yield $v;
+        }
+        yield break;
+    }
+
+    if (count($tramp->negative_listeners) > 0) {
+        $listener = $tramp->negative_listeners->pop();
+        $listener();
+        foreach (run($tramp, $found_result) as $v) {
+            yield $v;
+        }
+        yield break;
+    }
+
+    if ($found_result) {
+        $tramp->next_stack;
+        $tramp->stack = $tramp->next_stack;
+        $tramp->next_stack = [];
+        $tramp->generation++;
+        foreach (run($tramp, false) as $v) {
+            yield $v;
+        }
+        yield break;
+    }
+}
+
+// Listeners
+
+// There are six kinds of listeners that receive notifications
+// The first kind is a NodeListener which simply listens for a completed parse result
+// Takes the node-key of the parser which is awaiting this result.
+
+function NodeListener($node_key, $tramp) {
+    return $result ==>
+        push_result($tramp, $node_key, $result);
+}
+
+// The second kind of listener handles lookahead.
+function LookListener($node_key, $tramp) {
+    return $result ==>
+        success($tramp, $node_key, null, $node_key[0]);
+}
+
+// The third kind of listener is a CatListener which listens at each stage of the
+// concatenation parser to carry on the next step.  Think of it as a parse continuation.
+// A CatListener needs to know the sequence of results for the parsers that have come
+// before, and a list of parsers that remain.  Also, the node-key of the final node
+// that needs to know the overall result of the cat parser.
+
+function CatListener($results_so_far, $parser_sequence, $node_key, $tramp) {
+    return $result ==> {
+        $parsed_result = $result['result'];
+        $continue_index = $result['index'];
+        $new_results_so_far = afs\conj_flat($results_so_far, $parsed_result);
+
+        // first/next
+        if (seq($parser_sequence)) {
+            push_listener($tramp, [$continue_index, first($parser_sequence)],
+                            CatListener($new_results_so_far, next($parser_sequence), $node_key, $tramp));
+        } else {
+            success($tramp, $node_key, $new_results_so_far, $continue_index);
+        }
+    };
+}
+
+function CatFullListener($results_so_far, $parser_sequence, $node_key, $tramp) {
+    return $result ==> {
+        $parsed_result = $result['result'];
+        $continue_index = $result['index'];
+        $new_results_so_far = afs\conj_flat($results_so_far, $parsed_result);
+
+        if (red\singleton($parser_sequence)) {
+            push_full_listener($tramp, [$continue_index, first($parser_sequence)],
+                                CatFullListener($new_results_so_far, next($parser_sequence), $node_key, $tramp));
+            return;
+        }
+
+        if (seq($parser_sequence)) {
+            push_listener($tramp, [$continue_index, first($parser_seque)],
+                            CatFullListener($new_results_so_far, next($parser_sequence), $node_key, $tramp));
+            return;
+        }
+
+        success($tramp, $node_key, $new_results_so_far, $continue_index);
+    };
+}
+
+// The fourth kind of listener is a PlusListener, which is a variation of
+// the CatListener but optimized for "one or more" parsers.
+
+function PlusListener($results_so_far, $parser, $prev_index, $node_key, $tramp) {
+    return $result ==> {
+        $parsed_result = $result['result'];
+        $continue_index = $result['index'];
+        if ($continue_index === $prev_index) {
+            if (count($results_so_far) === 0) {
+                success($tramp, $node_key, null, $continue_index);
+            }
+        } else {
+            $new_results_so_far = afs\conj_flat($results_so_far, $parsed_result);
+            push_listener($tramp, [$continue_index, $parser],
+                            PlusListener($new_results_so_far, $parser, $continue_index, $node_key, $tramp));
+            success($tramp, $node_key, $new_results_so_far, $continue_index);
+        }
+    };
+}
+
 __HALT_COMPILER();
-
-(defn push-result
-  "Pushes a result into the trampoline's node.
-   Categorizes as either result or full-result.
-   Schedules notification to all existing listeners of result
-   (Full listeners only get notified about full results)"
-  [tramp node-key result]
-  (dprintln "Push result" (node-key 0) (:tag (node-key 1)) result)
-  (let [node (node-get tramp node-key)
-        parser (node-key 1)
-        ;; reduce result with reduction function if it exists
-        result (if (:hide parser)
-                 (assoc result :result nil)
-                 result)
-        result (if-let [reduction-function (:red parser)]
-                 (make-success
-                   (safe-with-meta
-                     (red/apply-reduction reduction-function (:result result))
-                     {::start-index (node-key 0) ::end-index (:index result)})
-                   (:index result))
-                 result)
-        total? (total-success? tramp result)
-        results (if total? (:full-results node) (:results node))]
-    (when (not (@results result))  ; when result is not already in @results
-      (debug (add! :push-result))
-      (swap! results conj result)
-      (doseq [listener @(:listeners node)]
-        (push-message tramp listener result))
-      (when total?
-        (doseq [listener @(:full-listeners node)]
-          (push-message tramp listener result))))))
-
-(defn push-listener
-  "Pushes a listener into the trampoline's node.
-   Schedules notification to listener of all existing results.
-   Initiates parse if necessary"
-  [tramp node-key listener]
-  (dprintln "push-listener" [(node-key 1) (node-key 0)] (type listener))
-  (let [listener-already-exists? (listener-exists? tramp node-key)
-        node (node-get tramp node-key)
-        listeners (:listeners node)]
-    (debug (add! :push-listener))
-    (swap! listeners conj listener)
-    (doseq [result @(:results node)]
-      (push-message tramp listener result))
-    (doseq [result @(:full-results node)]
-      (push-message tramp listener result))
-    (when (not listener-already-exists?)
-      (push-stack tramp #(-parse (node-key 1) (node-key 0) tramp)))))
-
-(defn push-full-listener
-  "Pushes a listener into the trampoline's node.
-   Schedules notification to listener of all existing full results."
-  [tramp node-key listener]
-  (let [full-listener-already-exists? (full-listener-exists? tramp node-key)
-        node (node-get tramp node-key)
-        listeners (:full-listeners node)]
-    (debug (add! :push-full-listener))
-    (swap! listeners conj listener)
-    (doseq [result @(:full-results node)]
-      (push-message tramp listener result))
-    (when (not full-listener-already-exists?)
-      (push-stack tramp #(-full-parse (node-key 1) (node-key 0) tramp)))))
-
-(defn push-negative-listener
-  "Pushes a thunk onto the trampoline's negative-listener stack."
-  [tramp negative-listener]
-  (swap! (:negative-listeners tramp) conj negative-listener))
-
-;(defn success [tramp node-key result end]
-;  (push-result tramp node-key (make-success result end)))
-
-(defmacro success [tramp node-key result end]
-  `(push-result ~tramp ~node-key (make-success ~result ~end)))
-
-(declare build-node-with-meta)
-(defn fail [tramp node-key index reason]
-  (swap! (:failure tramp)
-         (fn [failure]
-           (let [current-index (:index failure)]
-             (case (compare index current-index)
-               1 (Failure. index [reason])
-               0 (Failure. index (conj (:reason failure) reason))
-               -1  failure))))
-  #_(dprintln "Fail index" (:fail-index tramp))
-  (when (= index (:fail-index tramp))
-    (success tramp node-key
-             (build-node-with-meta
-               (:node-builder tramp) :instaparse/failure (subs (:text tramp) index)
-               index (count (:text tramp)))
-             (count (:text tramp)))))
-
-;; Stack helper functions
-
-(defn step
-  "Executes one thing on the stack (not threadsafe)"
-  [stack]
-  (let [top (peek @stack)]
-    (swap! stack pop)
-    #_(dprintln "Top" top (meta top))
-    (top)))
-
-(defn run
-  "Executes the stack until exhausted"
-  ([tramp] (run tramp nil))
-  ([tramp found-result?]
-    (let [stack (:stack tramp)]
-      ;_ (dprintln found-result? (count @(:stack tramp)) (count @(:next-stack tramp)))
-      (cond
-        @(:success tramp)
-        (lazy-seq (cons (:result @(:success tramp))
-                        (do (reset! (:success tramp) nil)
-                          (run tramp true))))
-
-        (pos? (count @stack))
-        (do ;(dprintln "stacks" (count @stack) (count @(:next-stack tramp)))
-          (step stack) (recur tramp found-result?))
-
-        (pos? (count @(:negative-listeners tramp)))
-        (let [listener (peek @(:negative-listeners tramp))]
-          (listener)
-          (swap! (:negative-listeners tramp) pop)
-          (recur tramp found-result?))
-
-        found-result?
-        (let [next-stack (:next-stack tramp)]
-          (dprintln "Swapping stacks" (count @(:stack tramp))
-                   (count @(:next-stack tramp)))
-          (reset! stack @next-stack)
-          (reset! next-stack [])
-          (swap! (:generation tramp) inc)
-          (dprintln "Swapped stacks" (count @(:stack tramp))
-                   (count @(:next-stack tramp)))
-          (recur tramp nil))
-
-        :else nil))))
-
-;; Listeners
-
-; There are six kinds of listeners that receive notifications
-; The first kind is a NodeListener which simply listens for a completed parse result
-; Takes the node-key of the parser which is awaiting this result.
-
-(defn NodeListener [node-key tramp]
-  (fn [result]
-    (dprintln "Node Listener received" [(node-key 0) (:tag (node-key 1))] "result" result)
-    (push-result tramp node-key result)))
-
-; The second kind of listener handles lookahead.
-(defn LookListener [node-key tramp]
-  (fn [result]
-    (success tramp node-key nil (node-key 0))))
-
-; The third kind of listener is a CatListener which listens at each stage of the
-; concatenation parser to carry on the next step.  Think of it as a parse continuation.
-; A CatListener needs to know the sequence of results for the parsers that have come
-; before, and a list of parsers that remain.  Also, the node-key of the final node
-; that needs to know the overall result of the cat parser.
-
-(defn CatListener [results-so-far parser-sequence node-key tramp]
-  (dpprint {:tag :CatListener
-           :results-so-far results-so-far
-           :parser-sequence (map :tag parser-sequence)
-           :node-key [(node-key 0) (:tag (node-key 1))]})
-  (fn [result]
-    (let [{parsed-result :result continue-index :index} result
-          new-results-so-far (afs/conj-flat results-so-far parsed-result)]
-      (if (seq parser-sequence)
-        (push-listener tramp [continue-index (first parser-sequence)]
-                       (CatListener new-results-so-far (next parser-sequence) node-key tramp))
-        (success tramp node-key new-results-so-far continue-index)))))
-
-(defn CatFullListener [results-so-far parser-sequence node-key tramp]
-;  (dpprint {:tag :CatFullListener
-;           :results-so-far results-so-far
-;           :parser-sequence (map :tag parser-sequence)
-;           :node-key [(node-key 0) (:tag (node-key 1))]})
-  (fn [result]
-    (let [{parsed-result :result continue-index :index} result
-          new-results-so-far (afs/conj-flat results-so-far parsed-result)]
-      (cond
-        (red/singleton? parser-sequence)
-        (push-full-listener tramp [continue-index (first parser-sequence)]
-                            (CatFullListener new-results-so-far (next parser-sequence) node-key tramp))
-
-        (seq parser-sequence)
-        (push-listener tramp [continue-index (first parser-sequence)]
-                       (CatFullListener new-results-so-far (next parser-sequence) node-key tramp))
-
-        :else
-        (success tramp node-key new-results-so-far continue-index)))))
-
-; The fourth kind of listener is a PlusListener, which is a variation of
-; the CatListener but optimized for "one or more" parsers.
-
-(defn PlusListener [results-so-far parser prev-index node-key tramp]
-  (fn [result]
-    (let [{parsed-result :result continue-index :index} result]
-      (if (= continue-index prev-index)
-        (when (zero? (count results-so-far))
-          (success tramp node-key nil continue-index))
-        (let [new-results-so-far (afs/conj-flat results-so-far parsed-result)]
-          (push-listener tramp [continue-index parser]
-                         (PlusListener new-results-so-far parser continue-index
-                                       node-key tramp))
-          (success tramp node-key new-results-so-far continue-index))))))
 
 (defn PlusFullListener [results-so-far parser prev-index node-key tramp]
   (fn [result]
