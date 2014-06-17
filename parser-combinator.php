@@ -216,7 +216,7 @@ function regexp($pattern) {
         ($str, $tramp, $cont) ==> {
             preg_match('/^'.$pattern.'/', $str, $matches);
             if (count($matches) > 0) {
-                list($match) = $matches[0];
+                $match = $matches[0];
                 $end = strlen($match);
                 $len = strlen($str);
                 $head = (string) substr($str, 0, $end);
