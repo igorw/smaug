@@ -278,8 +278,35 @@ function red($p, $fn) {
             succeed(call_user_func_array($fn, $val))));
 }
 
-$num = red(regexp('[0-9]+'), 'intval');
+$expr = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
+    return alt(red(seq($expr, string('+'), $term),
+                   ($x, $_, $y) ==> $x + $y),
+               red(seq($expr, string('-'), $term),
+                   ($x, $_, $y) ==> $x - $y),
+               $term);
+});
+
+$term = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
+    return alt(red(seq($term, string('+'), $factor),
+                   ($x, $_, $y) ==> $x + $y),
+               red(seq($term, string('-'), $factor),
+                   ($x, $_, $y) ==> $x - $y),
+               $factor);
+});
+
+$factor = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
+    return alt(red(seq(string('('), $expr, string(')')),
+                   ($_, $x, $__) ==> $x),
+               $num);
+});
+
+$num = red(regexp('[0-9]+'),
+           'intval');
+
 var_dump(iterator_to_array(run_parser($num, '1')));
+var_dump(iterator_to_array(run_parser($num, '42')));
+var_dump(iterator_to_array(run_parser($num, '1*2+3*4')));
+var_dump(iterator_to_array(run_parser($num, '9-(5+2)')));
 
 __HALT_COMPILER();
 
