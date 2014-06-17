@@ -83,48 +83,73 @@ function run_parser($parser, $str) {
     return $out();
 }
 
+// crappy linear time lookup table
+class Table {
+    public $data = [];
+    function put($key, $value) {
+        $this->remove($key);
+        $this->data[] = [$key, $value];
+    }
+    function lookup($key) {
+        foreach ($this->data as list($k, $v)) {
+            if ($k === $key) {
+                return $v;
+            }
+        }
+        return null;
+    }
+    function remove($key) {
+        foreach ($this->data as $i => list($k, $v)) {
+            if ($k === $key) {
+                unset($this->data[$i]);
+            }
+        }
+    }
+}
+
+class Entry {
+    public $continuations = [];
+    public $results = [];
+    function push_continuation($cont) {
+        array_unshift($this->continuations, $cont);
+    }
+    function push_result($result) {
+        array_unshift($this->results, $result);
+    }
+    function result_subsumed($result) {
+        return in_array($result, $entry->results, true);
+    }
+}
+
+class Trampoline {
+    public $stack;
+    public $table;
+    function __construct(SplStack $stack = null, Table $table = null) {
+        $this->stack = $stack ?: new SplStack();
+        $this->table = $table ?: new Table();
+    }
+    function has_next() {
+        return count($this->stack) > 0;
+    }
+    function step() {
+        if ($this->has_next()) {
+            list($fn, $args) = $this->stack->pop();
+            $fn($args);
+        }
+    }
+    function push_stack($fn, $args) {
+        $this->stack->push([$fn, $args]);
+    }
+    function push($fn, $str, $cont) {
+        $table_ref = ($fn, $str) ==> {
+            $pair = $table[$fn];
+        };
+    }
+}
+
 __HALT_COMPILER();
 
-(define (memo fn)
-  (let ((alist (mlist)))
-    (lambda args
-      (match (massoc args alist)
-        [(mcons args result) result]
-        [_ (let* ((result (apply fn args))
-                  (entry (mcons args result)))
-             (set! alist (mcons entry alist))
-             result)]))))
-
-(define trampoline%
-  (class object% (super-new)
-    (define stack (mlist))
-    (define table (mlist))
-
-    (define/public (has-next?)
-      (not (empty? stack)))
-
-    (define/public (step)
-      (when (has-next?)
-        (match (mcar stack)
-          [(mcons fn args)
-           (set! stack (mcdr stack))
-           (apply fn args)])))
-
-    (define/public (push-stack fn . args)
-      (let ((call (mcons fn args)))
-        (set! stack (mcons call stack))))
-
     (define/public (push fn str cont)
-      (define entry-continuations mcar)
-      (define entry-results mcdr)
-      (define (push-continuation! entry cont)
-        (set-mcar! entry (mcons cont (entry-continuations entry))))
-      (define (push-result! entry result)
-        (set-mcdr! entry (mcons result (entry-results entry))))
-      (define (result-subsumed? entry result)
-        (mmember result (entry-results entry)))
-      (define (make-entry)
-        (mcons (mlist) (mlist)))
       (define (table-ref fn str)
         (let ((pair (massoc fn table)))
           (match pair
