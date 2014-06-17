@@ -119,9 +119,35 @@ class Entry {
     function result_subsumed($result) {
         return in_array($result, $entry->results, true);
     }
+    function is_empty() {
+        return $this->continuations === [] && $this->results === [];
+    }
 }
 
 class Trampoline {
+    // todo move to bottom
+    private function table_ref($fn, $str) {
+        $memo = $this->table->lookup($fn);
+        if ($memo) {
+            $entry = $memo->lookup($str);
+            if ($entry) {
+                // parser has been called with str before
+                return $entry;
+            }
+            // first time parser has been called with str
+            $entry = new Entry();
+            $memo->put($str, $entry);
+            // this happens implicitly:
+            // $table->put($fn, $memo);
+            return $entry;
+        }
+        // first time parser has been called
+        $entry = new Entry();
+        $memo = new Table();
+        $memo->put($str, $entry);
+        $table->put($fn, $memo);
+        return $entry;
+    }
     public $stack;
     public $table;
     function __construct(SplStack $stack = null, Table $table = null) {
@@ -137,50 +163,34 @@ class Trampoline {
             $fn($args);
         }
     }
-    function push_stack($fn, $args) {
+    function push_stack(/* $fn, $args */) {
+        $args = func_get_args();
+        $fn = array_shift($args);
         $this->stack->push([$fn, $args]);
     }
     function push($fn, $str, $cont) {
-        $table_ref = ($fn, $str) ==> {
-            $pair = $table[$fn];
-        };
+        $entry = $this->table_ref($fn, $str);
+        if ($entry->is_empty()) {
+            $entry->push_continuation($cont);
+            // push the parser on the stack
+            $this->push_stack($fn, $str, $this, $result ==> {
+                if (!$entry->result_subsumed($result)) {
+                    $entry->push_result($result);
+                    foreach ($entry->continuations as $cont) {
+                        $cont($result);
+                    }
+                }
+            });
+        } else {
+            $entry->push_continuation($cont);
+            foreach ($entry->results as $result) {
+                $cont($result);
+            }
+        }
     }
 }
 
 __HALT_COMPILER();
-
-    (define/public (push fn str cont)
-      (define (table-ref fn str)
-        (let ((pair (massoc fn table)))
-          (match pair
-            [(mcons fn memo)
-             (match (massoc str memo)
-               ;; parser has been called with str before
-               [(mcons str entry) entry]
-               ;; first time parser has been called with str
-               [_ (let ((entry (make-entry)))
-                    (set-mcdr! pair (mcons (mcons str entry) memo))
-                    entry)])]
-            ;; first time parser has been called
-            [_ (let* ((entry (make-entry))
-                      (memo (mlist (mcons str entry))))
-                 (set! table (mcons (mcons fn memo) table))
-                 entry)])))
-      (let ((entry (table-ref fn str)))
-        (match entry
-          [(mcons (mlist) (mlist))
-           (push-continuation! entry cont)
-           ;; push the parser on the stack
-           (push-stack fn str this
-                       (lambda (result)
-                         (unless (result-subsumed? entry result)
-                           (push-result! entry result)
-                           (for ((cont (entry-continuations entry)))
-                                (cont result)))))]
-          [_
-           (push-continuation! entry cont)
-           (for ((result (entry-results entry)))
-                (cont result))])))
 
     (define/public (run)
       (do () ((not (has-next?)))
