@@ -26,10 +26,6 @@ function failure($rest) {
 
 // ---
 
-function identity($x) {
-    return $x;
-}
-
 function Y($le) {
     return call_user_func(
         $f ==> $f($f),
