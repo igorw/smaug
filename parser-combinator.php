@@ -245,18 +245,17 @@ function seq(/* $parsers... */) {
     $parsers = func_get_args();
     return memofn($parsers, (/* $parsers... */) ==> {
         $parsers = func_get_args();
-        return ($str, $tramp, $cont) ==> {
-            $seq2 = ($b, $a) ==>
-                bind($a, $x ==>
-                    bind($b, $y ==>
-                        succeed(array_merge($x, [$y]))));
+        $seq2 = ($b, $a) ==>
+            bind($a, $x ==>
+                bind($b, $y ==>
+                    succeed(array_merge($x, [$y]))));
 
-            // foldl
-            $acc = succeed([]);
-            foreach ($parsers as $parser) {
-                $acc = $seq2($parser, $acc);
-            }
-        };
+        // foldl
+        $acc = succeed([]);
+        foreach ($parsers as $parser) {
+            $acc = $seq2($parser, $acc);
+        }
+        return $acc;
     });
 }
 
@@ -308,8 +307,14 @@ $factor = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
 $num = red(regexp('[0-9]+'),
            'intval');
 
+// var_dump(iterator_to_array(run_parser(seq(string('foo'), string('bar')), 'foobar')));
+
 // var_dump(iterator_to_array(run_parser($num, '1')));
 // var_dump(iterator_to_array(run_parser($num, '42')));
+
+// var_dump(iterator_to_array(run_parser($factor, '42')));
+// var_dump(iterator_to_array(run_parser($factor, '(42)')));
+
 // var_dump(iterator_to_array(run_parser($expr, '42')));
 // var_dump(iterator_to_array(run_parser($expr, '1*2+3*4')));
 // var_dump(iterator_to_array(run_parser($expr, '9-(5+2)')));
