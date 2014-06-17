@@ -190,40 +190,45 @@ class Trampoline {
     }
 }
 
+function succeed($val) {
+    return memofn([$val], $val ===>
+        ($str, $tramp, $cont) ==> {
+            $cont(success($val, $str));
+        });
+}
+
+function string($match) {
+    return memofn([$match], $match ===>
+        ($str, $tramp, $cont) ==> {
+            $len = min(strlen($str), strlen($match));
+            $head = (string) substr($str, 0, $len);
+            $tail = (string) substr($str, $len);
+            if ($head === $match) {
+                $cont(success($head, $tail));
+            } else {
+                $cont(failure($tail));
+            }
+        });
+}
+
+function regexp($pattern) {
+    return memofn([$pattern], $pattern ===>
+        ($str, $tramp, $cont) ==> {
+            preg_match('/^'.$pattern.'/', $str, $matches);
+            if (count($matches) > 0) {
+                list($match) = $matches[0];
+                $end = strlen($match);
+                $len = strlen($str);
+                $head = (string) substr($str, 0, $end);
+                $head = (string) substr($str, $end, $len);
+                $cont(success($head, $tail));
+            } else {
+                $cont(failure($str));
+            }
+        });
+}
+
 __HALT_COMPILER();
-
-    (define/public (run)
-      (do () ((not (has-next?)))
-        (step)))))
-
-(define succeed
-  (memo
-   (lambda (val)
-     (lambda (str tramp cont)
-       (cont (success val str))))))
-
-(define string
-  (memo
-   (lambda (match)
-     (lambda (str tramp cont)
-       (let* ((len (min (string-length str) (string-length match)))
-              (head (substring str 0 len))
-              (tail (substring str len)))
-         (if (equal? head match)
-             (cont (success head tail))
-             (cont (failure tail))))))))
-
-(define regexp
-  (memo
-   (lambda (pattern)
-     (lambda (str tramp cont)
-       (match (regexp-match-positions (string-append "^" pattern) str)
-         [(cons (cons beg end) _)
-          (let* ((len (string-length str))
-                 (head (substring str beg end))
-                 (tail (substring str end len)))
-            (cont (success head tail)))]
-         [_ (cont (failure str))])))))
 
 (define (bind p fn)
   (lambda (str tramp cont)
