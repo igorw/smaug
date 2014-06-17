@@ -191,14 +191,14 @@ class Trampoline {
 }
 
 function succeed($val) {
-    return memofn([$val], $val ===>
+    return memofn([$val], $val ==>
         ($str, $tramp, $cont) ==> {
             $cont(success($val, $str));
         });
 }
 
 function string($match) {
-    return memofn([$match], $match ===>
+    return memofn([$match], $match ==>
         ($str, $tramp, $cont) ==> {
             $len = min(strlen($str), strlen($match));
             $head = (string) substr($str, 0, $len);
@@ -212,7 +212,7 @@ function string($match) {
 }
 
 function regexp($pattern) {
-    return memofn([$pattern], $pattern ===>
+    return memofn([$pattern], $pattern ==>
         ($str, $tramp, $cont) ==> {
             preg_match('/^'.$pattern.'/', $str, $matches);
             if (count($matches) > 0) {
@@ -228,33 +228,47 @@ function regexp($pattern) {
         });
 }
 
+function bind($p, $fn) {
+    return ($str, $tramp, $cont) ==>
+        $p($str, $tramp,
+            $result ==> {
+                if ($result instanceof Success) {
+                    call_user_func($fn($val), $rest, $tramp, $cont);
+                } else {
+                    // failure
+                    $cont($result);
+                }
+            });
+}
+
+function seq($parsers) {
+    return memofn([$parsers], $parsers ==>
+        ($str, $tramp, $cont) ==> {
+            $seq2 = ($b, $a) ==>
+                bind($a, $x ==>
+                    bind($b, $y ==>
+                        succeed(array_merge($x, [$y]))));
+
+            // foldl
+            $acc = succeed([]);
+            foreach ($parsers as $parser) {
+                $acc = $seq2($parser, $acc);
+            }
+        });
+}
+
+function alt(/* $parsers... */) {
+    $parsers = func_get_args();
+    return memofn($parsers, (/** $parsers... */) ==>
+        $parsers = func_get_args();
+        ($str, $tramp, $cont) ==> {
+            foreach ($parsers as $fn) {
+                $tramp->push($fn, $str, $cont);
+            }
+        });
+}
+
 __HALT_COMPILER();
-
-(define (bind p fn)
-  (lambda (str tramp cont)
-    (p str tramp
-       (lambda (result)
-         (match result
-           [(success val rest)
-            ((fn val) rest tramp cont)]
-           [failure
-            (cont failure)])))))
-
-(define seq
-  (memo
-   (lambda parsers
-     (define (seq2 b a)
-       (bind a (lambda (x)
-                 (bind b (lambda (y)
-                           (succeed (append x (list y))))))))
-     (foldl seq2 (succeed '()) parsers))))
-
-(define alt
-  (memo
-   (lambda parsers
-     (lambda (str tramp cont)
-       (for ((fn parsers))
-            (send tramp push fn str cont))))))
 
 (define red
   (memo
