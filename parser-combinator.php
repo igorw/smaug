@@ -241,9 +241,11 @@ function bind($p, $fn) {
             });
 }
 
-function seq($parsers) {
-    return memofn([$parsers], $parsers ==>
-        ($str, $tramp, $cont) ==> {
+function seq(/* $parsers... */) {
+    $parsers = func_get_args();
+    return memofn($parsers, (/* $parsers... */) ==> {
+        $parsers = func_get_args();
+        return ($str, $tramp, $cont) ==> {
             $seq2 = ($b, $a) ==>
                 bind($a, $x ==>
                     bind($b, $y ==>
@@ -254,29 +256,29 @@ function seq($parsers) {
             foreach ($parsers as $parser) {
                 $acc = $seq2($parser, $acc);
             }
-        });
+        };
+    });
 }
 
 function alt(/* $parsers... */) {
     $parsers = func_get_args();
-    return memofn($parsers, (/** $parsers... */) ==>
+    return memofn($parsers, (/** $parsers... */) ==> {
         $parsers = func_get_args();
-        ($str, $tramp, $cont) ==> {
+        return ($str, $tramp, $cont) ==> {
             foreach ($parsers as $fn) {
                 $tramp->push($fn, $str, $cont);
             }
-        });
+        };
+    });
+}
+
+function red($p, $fn) {
+    return memofn([$p, $fn], ($p, $fn) ==>
+        bind($p, $val ==>
+            succeed(call_user_func_array($fn, $val))));
 }
 
 __HALT_COMPILER();
-
-(define red
-  (memo
-   (lambda (p fn)
-     (bind p (lambda (val)
-               (match val
-                 [(list val ...) (succeed (apply fn val))]
-                 [_ (succeed (fn val))]))))))
 
 (define-parser expr
   (alt (red (seq expr (string "+") term)
