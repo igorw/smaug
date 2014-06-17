@@ -117,7 +117,7 @@ class Entry {
         array_unshift($this->results, $result);
     }
     function result_subsumed($result) {
-        return in_array($result, $entry->results, true);
+        return in_array($result, $this->results, true);
     }
     function is_empty() {
         return $this->continuations === [] && $this->results === [];
@@ -138,14 +138,14 @@ class Trampoline {
             $entry = new Entry();
             $memo->put($str, $entry);
             // this happens implicitly:
-            // $table->put($fn, $memo);
+            // $this->table->put($fn, $memo);
             return $entry;
         }
         // first time parser has been called
         $entry = new Entry();
         $memo = new Table();
         $memo->put($str, $entry);
-        $table->put($fn, $memo);
+        $this->table->put($fn, $memo);
         return $entry;
     }
     public $stack;
@@ -278,7 +278,12 @@ function red($p, $fn) {
             succeed(call_user_func_array($fn, $val))));
 }
 
-$expr = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
+function delay_parser($fn) {
+    return ($str, $tramp, $cont) ==>
+        call_user_func($fn(), $str, $tramp, $cont);
+}
+
+$expr = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
     return alt(red(seq($expr, string('+'), $term),
                    ($x, $_, $y) ==> $x + $y),
                red(seq($expr, string('-'), $term),
@@ -286,7 +291,7 @@ $expr = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
                $term);
 });
 
-$term = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
+$term = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
     return alt(red(seq($term, string('+'), $factor),
                    ($x, $_, $y) ==> $x + $y),
                red(seq($term, string('-'), $factor),
@@ -294,7 +299,7 @@ $term = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
                $factor);
 });
 
-$factor = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
+$factor = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
     return alt(red(seq(string('('), $expr, string(')')),
                    ($_, $x, $__) ==> $x),
                $num);
@@ -303,10 +308,11 @@ $factor = call_user_func(function () use (&$expr, &$term, &$factor, &$num) {
 $num = red(regexp('[0-9]+'),
            'intval');
 
-var_dump(iterator_to_array(run_parser($num, '1')));
-var_dump(iterator_to_array(run_parser($num, '42')));
-var_dump(iterator_to_array(run_parser($num, '1*2+3*4')));
-var_dump(iterator_to_array(run_parser($num, '9-(5+2)')));
+// var_dump(iterator_to_array(run_parser($num, '1')));
+// var_dump(iterator_to_array(run_parser($num, '42')));
+// var_dump(iterator_to_array(run_parser($expr, '42')));
+// var_dump(iterator_to_array(run_parser($expr, '1*2+3*4')));
+// var_dump(iterator_to_array(run_parser($expr, '9-(5+2)')));
 
 __HALT_COMPILER();
 
