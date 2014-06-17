@@ -64,20 +64,20 @@ function run_parser($parser, $str) {
     $tramp = new Trampoline();
     $results = [];
 
-    $parser($str, $tramp, $result ==> {
+    $parser($str, $tramp, function ($result) use (&$results) {
         if ($result instanceof Success && $result->rest === "") {
             $results[] = $result;
         }
     });
 
-    $out = function () use (&$results) {
-        while ($tramp->has_next()) {
+    $out = function () use ($tramp, &$results) {
+        do {
             $tramp->step();
             foreach ($results as $result) {
                 yield $result;
             }
             $results = [];
-        }
+        } while ($tramp->has_next());
     };
 
     return $out();
@@ -160,7 +160,7 @@ class Trampoline {
     function step() {
         if ($this->has_next()) {
             list($fn, $args) = $this->stack->pop();
-            $fn($args);
+            call_user_func_array($fn, $args);
         }
     }
     function push_stack(/* $fn, $args */) {
@@ -220,7 +220,7 @@ function regexp($pattern) {
                 $end = strlen($match);
                 $len = strlen($str);
                 $head = (string) substr($str, 0, $end);
-                $head = (string) substr($str, $end, $len);
+                $tail = (string) substr($str, $end, $len);
                 $cont(success($head, $tail));
             } else {
                 $cont(failure($str));
@@ -233,7 +233,7 @@ function bind($p, $fn) {
         $p($str, $tramp,
             $result ==> {
                 if ($result instanceof Success) {
-                    call_user_func($fn($val), $rest, $tramp, $cont);
+                    call_user_func($fn($result->value), $result->rest, $tramp, $cont);
                 } else {
                     // failure
                     $cont($result);
@@ -277,6 +277,9 @@ function red($p, $fn) {
         bind($p, $val ==>
             succeed(call_user_func_array($fn, $val))));
 }
+
+$num = red(regexp('[0-9]+'), 'intval');
+var_dump(iterator_to_array(run_parser($num, '1')));
 
 __HALT_COMPILER();
 
