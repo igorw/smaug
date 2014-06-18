@@ -338,31 +338,3 @@ $s = delay_parser(function () use (&$s) {
 // var_dump(iterator_to_array(run_parser($expr, '42')));
 // var_dump(iterator_to_array(run_parser($expr, '1*2+3*4')));
 // var_dump(iterator_to_array(run_parser($expr, '9-(5+2)')));
-
-__HALT_COMPILER();
-
-(define-parser expr
-  (alt (red (seq expr (string "+") term)
-            (lambda (x _ y) (+ x y)))
-       (red (seq expr (string "-") term)
-            (lambda (x _ y) (- x y)))
-       term))
-
-(define-parser term
-  (alt (red (seq term (string "*") factor)
-            (lambda (x _ y) (* x y)))
-       (red (seq term (string "/") factor)
-            (lambda (x _ y) (/ x y)))
-       factor))
-
-(define-parser factor
-  (alt (red (seq (string "(") expr (string ")"))
-            (lambda (_ x __) x))
-       num))
-
-(define-parser num
-  (red (regexp "[0-9]+")
-       string->number))
-
-(stream->list (expr "1*2+3*4"))
-(stream->list (expr "9-(5+2)"))
