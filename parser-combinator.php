@@ -51,7 +51,10 @@ function memo(callable $fn) {
 }
 
 function memofn(array $args, callable $fn) {
-    return call_user_func_array(memo($fn), $args);
+    static $memos = [];
+    $id = spl_object_hash($fn);
+    $memo = isset($memos[$id]) ? $memos[$id] : memo($fn);
+    return call_user_func_array($memo, $args);
 }
 
 // ---
