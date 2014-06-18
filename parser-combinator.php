@@ -281,6 +281,19 @@ function delay_parser($fn) {
         call_user_func($fn(), $str, $tramp, $cont);
 }
 
+function take($n, $iter) {
+    if ($n === 0) {
+        yield break;
+    }
+    foreach ($iter as $v) {
+        yield $v;
+        $n--;
+        if ($n === 0) {
+            break;
+        }
+    }
+}
+
 $expr = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
     return alt(red(seq($expr, string('+'), $term),
                    ($x, $_, $y) ==> $x + $y),
@@ -307,6 +320,14 @@ $num = red(regexp('[0-9]+'),
            'intval');
 
 // var_dump(iterator_to_array(run_parser(seq(string('foo'), string('bar')), 'foobar')));
+
+$s = delay_parser(function () use (&$s) {
+    return alt(seq($s, string('a')),
+               string('a'));
+});
+// var_dump(iterator_to_array(take(1, run_parser($s, 'a'))));
+// var_dump(iterator_to_array(take(1, run_parser($s, 'aa'))));
+// var_dump(iterator_to_array(take(2, run_parser($s, 'a'))));
 
 // var_dump(iterator_to_array(run_parser($num, '1')));
 // var_dump(iterator_to_array(run_parser($num, '42')));
