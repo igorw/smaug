@@ -4,7 +4,7 @@
 
 namespace igorw\smaug;
 
-require __DIR__.'/src/parser.php';
+require __DIR__.'/../src/parser.php';
 
 $p = new \ArrayObject();
 

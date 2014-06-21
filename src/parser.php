@@ -1,9 +1,5 @@
 <?hh
 
-// ...
-//
-// https://github.com/epsil/gll
-
 namespace igorw\smaug;
 
 class Success {
@@ -281,6 +277,8 @@ function alt(/* $parsers... */) {
     return memofn($parsers, $fn);
 }
 
+// @todo find a better solution than this messy is_array check
+// possibly by introducing a tuple and only multi-applying tuples
 function red($p, $rfn) {
     static $fn;
     $fn = $fn ?: ($p, $rfn) ==>

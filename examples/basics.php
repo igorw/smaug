@@ -2,7 +2,7 @@
 
 namespace igorw\smaug;
 
-require __DIR__.'/src/parser.php';
+require __DIR__.'/../src/parser.php';
 
 var_dump(iterator_to_array(run_parser(seq(string('foo'), string('bar')), 'foobar')));
 

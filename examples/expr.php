@@ -5,7 +5,7 @@
 
 namespace igorw\smaug;
 
-require __DIR__.'/src/parser.php';
+require __DIR__.'/../src/parser.php';
 
 $expr = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
     return alt(red(seq($expr, string('+'), $term),
