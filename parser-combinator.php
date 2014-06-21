@@ -40,7 +40,7 @@ function memo(callable $fn) {
     return () ==> {
         $args = func_get_args();
         foreach ($alist as list($a, $result)) {
-            if ($a === $args) {
+            if ($a == $args) {
                 return $result;
             }
         }
@@ -64,7 +64,7 @@ function run_parser($parser, $str) {
     $results = [];
 
     $parser($str, $tramp, function ($result) use (&$results) {
-        if ($result instanceof Success && $result->rest === "") {
+        if ($result instanceof Success && $result->rest === '') {
             $results[] = $result;
         }
     });
@@ -91,7 +91,7 @@ class Table {
     }
     function lookup($key) {
         foreach ($this->data as list($k, $v)) {
-            if ($k === $key) {
+            if ($k == $key) {
                 return $v;
             }
         }
@@ -99,7 +99,7 @@ class Table {
     }
     function remove($key) {
         foreach ($this->data as $i => list($k, $v)) {
-            if ($k === $key) {
+            if ($k == $key) {
                 unset($this->data[$i]);
             }
         }
