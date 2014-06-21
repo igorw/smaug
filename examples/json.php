@@ -4,7 +4,7 @@
 
 namespace igorw\gll;
 
-require 'parser-combinator.php';
+require __DIR__.'/parser-combinator.php';
 
 $p = new \ArrayObject();
 

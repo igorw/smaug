@@ -5,7 +5,7 @@
 
 namespace igorw\gll;
 
-require 'parser-combinator.php';
+require __DIR__.'/parser-combinator.php';
 
 $expr = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
     return alt(red(seq($expr, string('+'), $term),

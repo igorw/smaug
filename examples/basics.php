@@ -1,11 +1,8 @@
 <?hh
 
-// mathematical expression example
-// taken from: https://github.com/epsil/gll
-
 namespace igorw\gll;
 
-require 'parser-combinator.php';
+require __DIR__.'/parser-combinator.php';
 
 var_dump(iterator_to_array(run_parser(seq(string('foo'), string('bar')), 'foobar')));
 
