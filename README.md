@@ -1,3 +1,5 @@
+![smaug the dragon](doc/dragon.png)
+
 # smaug
 
 Here be dragons.
