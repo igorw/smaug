@@ -320,10 +320,10 @@ $expr = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
 });
 
 $term = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
-    return alt(red(seq($term, string('+'), $factor),
-                   ($x, $_, $y) ==> $x + $y),
-               red(seq($term, string('-'), $factor),
-                   ($x, $_, $y) ==> $x - $y),
+    return alt(red(seq($term, string('*'), $factor),
+                   ($x, $_, $y) ==> $x * $y),
+               red(seq($term, string('/'), $factor),
+                   ($x, $_, $y) ==> $x / $y),
                $factor);
 });
 
