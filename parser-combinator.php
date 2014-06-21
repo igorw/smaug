@@ -1,5 +1,12 @@
 <?hh
 
+// ...
+//
+// https://github.com/epsil/gll
+
+// @todo add namespace
+// namespace igorw\gll;
+
 class Success {
     public $value;
     public $rest;
@@ -126,8 +133,8 @@ class Entry {
 class Trampoline {
     public $stack;
     public $table;
-    function __construct(SplStack $stack = null, Table $table = null) {
-        $this->stack = $stack ?: new SplStack();
+    function __construct(\SplStack $stack = null, Table $table = null) {
+        $this->stack = $stack ?: new \SplStack();
         $this->table = $table ?: new Table();
     }
     function has_next() {
@@ -310,48 +317,3 @@ function take($n, $iter) {
         }
     }
 }
-
-$expr = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
-    return alt(red(seq($expr, string('+'), $term),
-                   ($x, $_, $y) ==> $x + $y),
-               red(seq($expr, string('-'), $term),
-                   ($x, $_, $y) ==> $x - $y),
-               $term);
-});
-
-$term = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
-    return alt(red(seq($term, string('*'), $factor),
-                   ($x, $_, $y) ==> $x * $y),
-               red(seq($term, string('/'), $factor),
-                   ($x, $_, $y) ==> $x / $y),
-               $factor);
-});
-
-$factor = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
-    return alt(red(seq(string('('), $expr, string(')')),
-                   ($_, $x, $__) ==> $x),
-               $num);
-});
-
-$num = red(regexp('[0-9]+'),
-           'intval');
-
-// var_dump(iterator_to_array(run_parser(seq(string('foo'), string('bar')), 'foobar')));
-
-$s = delay_parser(function () use (&$s) {
-    return alt(seq($s, string('a')),
-               string('a'));
-});
-// var_dump(iterator_to_array(take(1, run_parser($s, 'a'))));
-// var_dump(iterator_to_array(take(1, run_parser($s, 'aa'))));
-// var_dump(iterator_to_array(take(2, run_parser($s, 'a'))));
-
-// var_dump(iterator_to_array(run_parser($num, '1')));
-// var_dump(iterator_to_array(run_parser($num, '42')));
-
-// var_dump(iterator_to_array(run_parser($factor, '42')));
-// var_dump(iterator_to_array(run_parser($factor, '(42)')));
-
-// var_dump(iterator_to_array(run_parser($expr, '42')));
-// var_dump(iterator_to_array(run_parser($expr, '1*2+3*4')));
-// var_dump(iterator_to_array(run_parser($expr, '9-(5+2)')));
