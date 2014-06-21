@@ -32,15 +32,6 @@ function failure($rest) {
 
 // ---
 
-function Y($le) {
-    return call_user_func(
-        $f ==> $f($f),
-        $f ==> $le($x ==> call_user_func($f($f), $x))
-    );
-}
-
-// ---
-
 function memo(callable $fn) {
     $alist = [];
     return () ==> {
