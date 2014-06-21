@@ -21,9 +21,8 @@ detached from the original definition of the language you're trying to parse.
 
 There are tools that allow you to get parser from a grammar definition. In
 common use are parser generators such as Yacc and Bison. But they require
-inline code definition corresponding to the parse that will then generate the
-code for the parser. They also don't handle certain grammars such as
-left-recursive.
+inline code definition that will then generate the code for the parser. They
+also don't handle certain grammars, such as left-recursive ones.
 
 But... There is a solution. From the land of functional programming come the
 mighty **Parser Combinators**!
