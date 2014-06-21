@@ -9,8 +9,9 @@ expressions, but they only get you so far. And parsing more complex structures
 becomes tedious and awkward. And also much harder to get right.
 
 Say you wanted to write a JSON parser. Oh, there already is one called
-`json_decode`? Ok. Say you wanted to write an [edn](https://github.com/edn-
-format/edn) parser. It's better than JSON because it's extensible.
+`json_decode`? Ok. Say you wanted to write an 
+[edn](https://github.com/edn-format/edn) parser. It's better than JSON because
+it's extensible.
 
 How would you do it? You would probably hand-roll it.
 
