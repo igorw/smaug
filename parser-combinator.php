@@ -116,7 +116,7 @@ class Entry {
         array_unshift($this->results, $result);
     }
     function result_subsumed($result) {
-        return in_array($result, $this->results, true);
+        return in_array($result, $this->results);
     }
     function is_empty() {
         return $this->continuations === [] && $this->results === [];
