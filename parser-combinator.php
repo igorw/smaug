@@ -124,29 +124,6 @@ class Entry {
 }
 
 class Trampoline {
-    // todo move to bottom
-    private function table_ref($fn, $str) {
-        $memo = $this->table->lookup($fn);
-        if ($memo) {
-            $entry = $memo->lookup($str);
-            if ($entry) {
-                // parser has been called with str before
-                return $entry;
-            }
-            // first time parser has been called with str
-            $entry = new Entry();
-            $memo->put($str, $entry);
-            // this happens implicitly:
-            // $this->table->put($fn, $memo);
-            return $entry;
-        }
-        // first time parser has been called
-        $entry = new Entry();
-        $memo = new Table();
-        $memo->put($str, $entry);
-        $this->table->put($fn, $memo);
-        return $entry;
-    }
     public $stack;
     public $table;
     function __construct(SplStack $stack = null, Table $table = null) {
@@ -186,6 +163,28 @@ class Trampoline {
                 $cont($result);
             }
         }
+    }
+    private function table_ref($fn, $str) {
+        $memo = $this->table->lookup($fn);
+        if ($memo) {
+            $entry = $memo->lookup($str);
+            if ($entry) {
+                // parser has been called with str before
+                return $entry;
+            }
+            // first time parser has been called with str
+            $entry = new Entry();
+            $memo->put($str, $entry);
+            // this happens implicitly:
+            // $this->table->put($fn, $memo);
+            return $entry;
+        }
+        // first time parser has been called
+        $entry = new Entry();
+        $memo = new Table();
+        $memo->put($str, $entry);
+        $this->table->put($fn, $memo);
+        return $entry;
     }
 }
 
