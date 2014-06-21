@@ -4,8 +4,7 @@
 //
 // https://github.com/epsil/gll
 
-// @todo add namespace
-// namespace igorw\gll;
+namespace igorw\gll;
 
 class Success {
     public $value;
@@ -295,7 +294,9 @@ function red($p, $rfn) {
     static $fn;
     $fn = $fn ?: ($p, $rfn) ==>
         bind($p, $val ==>
-            succeed(call_user_func_array($rfn, $val)));
+            is_array($val)
+                ? succeed(call_user_func_array($rfn, $val))
+                : succeed($rfn($val)));
 
     return memofn([$p, $rfn], $fn);
 }

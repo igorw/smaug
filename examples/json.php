@@ -2,8 +2,7 @@
 
 // JSON
 
-// @todo add namespace
-// namespace igorw\gll;
+namespace igorw\gll;
 
 require 'parser-combinator.php';
 
