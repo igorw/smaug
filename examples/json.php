@@ -1,7 +1,6 @@
 <?hh
 
-// mathematical expression example
-// taken from: https://github.com/epsil/gll
+// JSON
 
 // @todo add namespace
 // namespace igorw\gll;
