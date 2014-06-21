@@ -190,14 +190,18 @@ class Trampoline {
 }
 
 function succeed($val) {
-    return memofn([$val], $val ==>
+    static $fn;
+    $fn = $fn ?: $val ==>
         ($str, $tramp, $cont) ==> {
             $cont(success($val, $str));
-        });
+        };
+
+    return memofn([$val], $fn);
 }
 
 function string($match) {
-    return memofn([$match], $match ==>
+    static $fn;
+    $fn = $fn ?: $match ==>
         ($str, $tramp, $cont) ==> {
             $len = min(strlen($str), strlen($match));
             $head = (string) substr($str, 0, $len);
@@ -207,11 +211,14 @@ function string($match) {
             } else {
                 $cont(failure($tail));
             }
-        });
+        };
+
+    return memofn([$match], $fn);
 }
 
 function regexp($pattern) {
-    return memofn([$pattern], $pattern ==>
+    static $fn;
+    $fn = $fn ?: $pattern ==>
         ($str, $tramp, $cont) ==> {
             preg_match('/^'.$pattern.'/', $str, $matches);
             if (count($matches) > 0) {
@@ -224,7 +231,9 @@ function regexp($pattern) {
             } else {
                 $cont(failure($str));
             }
-        });
+        };
+
+    return memofn([$pattern], $fn);
 }
 
 function bind($p, $fn) {
@@ -241,9 +250,9 @@ function bind($p, $fn) {
 }
 
 function seq(/* $parsers... */) {
-    $parsers = func_get_args();
-    return memofn($parsers, (/* $parsers... */) ==> {
-        $parsers = func_get_args();
+    static $fn;
+    $fn = $fn ?: (/* $_parsers... */) ==> {
+        $_parsers = func_get_args();
         $seq2 = ($b, $a) ==>
             bind($a, $x ==>
                 bind($b, $y ==>
@@ -251,29 +260,38 @@ function seq(/* $parsers... */) {
 
         // foldl
         $acc = succeed([]);
-        foreach ($parsers as $parser) {
+        foreach ($_parsers as $parser) {
             $acc = $seq2($parser, $acc);
         }
         return $acc;
-    });
+    };
+
+    $parsers = func_get_args();
+    return memofn($parsers, $fn);
 }
 
 function alt(/* $parsers... */) {
-    $parsers = func_get_args();
-    return memofn($parsers, (/** $parsers... */) ==> {
-        $parsers = func_get_args();
+    static $fn;
+    $fn = $fn ?: (/** $_parsers... */) ==> {
+        $_parsers = func_get_args();
         return ($str, $tramp, $cont) ==> {
-            foreach ($parsers as $fn) {
+            foreach ($_parsers as $fn) {
                 $tramp->push($fn, $str, $cont);
             }
         };
-    });
+    };
+
+    $parsers = func_get_args();
+    return memofn($parsers, $fn);
 }
 
-function red($p, $fn) {
-    return memofn([$p, $fn], ($p, $fn) ==>
+function red($p, $rfn) {
+    static $fn;
+    $fn = $fn ?: ($p, $rfn) ==>
         bind($p, $val ==>
-            succeed(call_user_func_array($fn, $val))));
+            succeed(call_user_func_array($rfn, $val)));
+
+    return memofn([$p, $rfn], $fn);
 }
 
 function delay_parser($fn) {
