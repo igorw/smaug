@@ -9,13 +9,13 @@ expressions, but they only get you so far. And parsing more complex structures
 becomes tedious and awkward. And also much harder to get right.
 
 Say you wanted to write a JSON parser. Oh, there already is one called
-`json_decode`? Ok. Say you wanted to write an 
+`json_decode`? Ok. Say you wanted to write an
 [edn](https://github.com/edn-format/edn) parser. It's better than JSON because
 it's extensible.
 
 How would you do it? You would probably hand-roll it.
 
-So now you're constructing some recursive descent parser from hand. It kind of
+So now you're constructing some recursive descent parser by hand. It kind of
 works but you just wrote 500 lines of highly specific code. And it's quite
 detached from the original definition of the language you're trying to parse.
 
