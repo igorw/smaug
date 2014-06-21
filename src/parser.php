@@ -4,7 +4,7 @@
 //
 // https://github.com/epsil/gll
 
-namespace igorw\gll;
+namespace igorw\smaug;
 
 class Success {
     public $value;

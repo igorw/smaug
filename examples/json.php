@@ -2,9 +2,9 @@
 
 // JSON
 
-namespace igorw\gll;
+namespace igorw\smaug;
 
-require __DIR__.'/parser-combinator.php';
+require __DIR__.'/src/parser.php';
 
 $p = new \ArrayObject();
 

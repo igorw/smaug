@@ -1,8 +1,8 @@
 <?hh
 
-namespace igorw\gll;
+namespace igorw\smaug;
 
-require __DIR__.'/parser-combinator.php';
+require __DIR__.'/src/parser.php';
 
 var_dump(iterator_to_array(run_parser(seq(string('foo'), string('bar')), 'foobar')));
 

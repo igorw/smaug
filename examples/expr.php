@@ -3,9 +3,9 @@
 // mathematical expression example
 // taken from: https://github.com/epsil/gll
 
-namespace igorw\gll;
+namespace igorw\smaug;
 
-require __DIR__.'/parser-combinator.php';
+require __DIR__.'/src/parser.php';
 
 $expr = delay_parser(function () use (&$expr, &$term, &$factor, &$num) {
     return alt(red(seq($expr, string('+'), $term),
