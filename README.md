@@ -19,7 +19,7 @@ So now you're constructing some recursive descent parser by hand. It kind of
 works but you just wrote 500 lines of highly specific code. And it's quite
 detached from the original definition of the language you're trying to parse.
 
-There are tools that allow you to get parser from a grammar definition. In
+There are tools that allow you to get a parser from a grammar definition. In
 common use are parser generators such as Yacc and Bison. But they require
 inline code definition that will then generate the code for the parser. They
 also don't handle certain grammars, such as left-recursive ones.
