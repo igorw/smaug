@@ -50,7 +50,7 @@ like this:
 
     (foo bar (baz (qux quux the great)))
 
-Well, here is how you can do that with smaug!
+Well, here is how you can create a parser for that with smaug!
 
     $p = new \ArrayObject();
 
