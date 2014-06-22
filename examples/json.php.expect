@@ -1,0 +1,112 @@
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#370 (2) {
+    ["value"]=>
+    array(2) {
+      [0]=>
+      string(5) "value"
+      [1]=>
+      array(2) {
+        [0]=>
+        string(5) "array"
+        [1]=>
+        array(0) {
+        }
+      }
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#764 (2) {
+    ["value"]=>
+    array(2) {
+      [0]=>
+      string(5) "value"
+      [1]=>
+      array(2) {
+        [0]=>
+        string(6) "object"
+        [1]=>
+        array(0) {
+        }
+      }
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#1018 (2) {
+    ["value"]=>
+    array(2) {
+      [0]=>
+      string(5) "value"
+      [1]=>
+      array(2) {
+        [0]=>
+        string(6) "string"
+        [1]=>
+        array(2) {
+          [0]=>
+          string(5) "chars"
+          [1]=>
+          string(3) "foo"
+        }
+      }
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#1609 (2) {
+    ["value"]=>
+    array(2) {
+      [0]=>
+      string(5) "value"
+      [1]=>
+      array(2) {
+        [0]=>
+        string(6) "object"
+        [1]=>
+        array(2) {
+          [0]=>
+          string(7) "members"
+          [1]=>
+          string(4) "pair"
+        }
+      }
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#3406 (2) {
+    ["value"]=>
+    array(2) {
+      [0]=>
+      string(5) "value"
+      [1]=>
+      array(2) {
+        [0]=>
+        string(6) "object"
+        [1]=>
+        array(2) {
+          [0]=>
+          string(7) "members"
+          [1]=>
+          string(4) "pair"
+        }
+      }
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}

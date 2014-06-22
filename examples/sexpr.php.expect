@@ -1,0 +1,70 @@
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#77 (2) {
+    ["value"]=>
+    string(3) "foo"
+    ["rest"]=>
+    string(0) ""
+  }
+}
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#239 (2) {
+    ["value"]=>
+    array(0) {
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#421 (2) {
+    ["value"]=>
+    array(1) {
+      [0]=>
+      string(3) "foo"
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#712 (2) {
+    ["value"]=>
+    array(2) {
+      [0]=>
+      string(3) "foo"
+      [1]=>
+      array(1) {
+        [0]=>
+        string(3) "bar"
+      }
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}
+array(1) {
+  [0]=>
+  object(igorw\smaug\Success)#1855 (2) {
+    ["value"]=>
+    array(2) {
+      [0]=>
+      string(3) "foo"
+      [1]=>
+      array(2) {
+        [0]=>
+        string(3) "bar"
+        [1]=>
+        array(1) {
+          [0]=>
+          string(3) "baz"
+        }
+      }
+    }
+    ["rest"]=>
+    string(0) ""
+  }
+}
