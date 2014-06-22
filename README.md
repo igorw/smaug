@@ -27,8 +27,9 @@ also don't handle certain grammars, such as left-recursive ones.
 But... There is a solution. From the land of functional programming come the
 mighty **Parser Combinators**!
 
-You get to define a parser. In your language! And it closely mirrors context-
-free grammars! Smaug is one implementation of this, in PHP of all languages.
+You get to define a parser. In your language! And it closely mirrors
+context-free grammars! Smaug is one implementation of this, in PHP of all
+languages.
 
 ## Example
 
